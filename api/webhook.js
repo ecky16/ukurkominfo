@@ -28,16 +28,21 @@ export default async function handler(req, res) {
 }
 
 async function getSheetData() {
-  // Rapikan Key agar tidak error DECODER
   const privateKey = process.env.GOOGLE_PRIVATE_KEY.split(String.raw`\n`).join('\n');
   
   const auth = new JWT({
     email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
     key: privateKey,
-    scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
+    // Kita tambahkan scope spreadsheets secara penuh agar tidak 403
+    scopes: [
+      'https://www.googleapis.com/auth/spreadsheets',
+      'https://www.googleapis.com/auth/drive.readonly'
+    ],
   });
 
   const doc = new GoogleSpreadsheet('1d0mU2ND5xZNT0VT5wWVGnbyIM4ladD7TgRs4zaDkjeM', auth);
+  
+  // ... sisa kode di bawahnya tetap sama;
   
   await doc.loadInfo();
   const sheet = doc.sheetsByTitle['PVT FFG BGES'];
