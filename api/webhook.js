@@ -4,7 +4,7 @@ const { JWT } = require('google-auth-library');
 export default async function handler(req, res) {
   // Fitur Cron Job untuk kirim otomatis tiap jam 9, 12, 15, 18
   if (req.query.action === 'cron') {
-    const GROUP_ID = "-100xxxxxxxxxx"; // GANTI: Masukkan ID Grup Mas Ecky di sini
+    const GROUP_ID = "-5126863127"; // GANTI: Masukkan ID Grup Mas Ecky di sini
     try {
       const data = await getSheetData();
       await sendTelegram(GROUP_ID, data);
