@@ -54,28 +54,29 @@ for (let r = 900; r <= 925; r++) {
     const noInternet = sheet.getCell(r, 20).formattedValue || "-";
     const nama = sheet.getCell(r, 21).formattedValue || "-";
     
-    // Kita ambil nilai mentah dan paksa jadi String + Huruf Besar
+    // Ambil nilai, ubah ke String, buang semua spasi dan karakter aneh
     const statusRaw = sheet.getCell(r, 22).formattedValue || "";
-    const status = String(statusRaw).toUpperCase().trim();
+    const statusClean = String(statusRaw).toUpperCase().replace(/[^A-Z0-9]/g, ''); 
     
     const tanggal = sheet.getCell(r, 23).formattedValue || "-";
     const redaman = sheet.getCell(r, 24).formattedValue || "-";
-    const hasil = sheet.getCell(r, 25).formattedValue || "-";
+    const hasilRaw = sheet.getCell(r, 25).formattedValue || "";
+    const hasilClean = String(hasilRaw).toUpperCase().replace(/[^A-Z0-9]/g, '');
 
-    let iconHasil = hasil; 
+    let iconHasil = hasilRaw || "-"; 
     
-    // Logika pengecekan yang lebih longgar (loose matching)
-    if (status.indexOf("SPEK") !== -1) {
-      iconHasil = `✅ ${hasil}`;
-    } else if (status.indexOf("DYING") !== -1 || status.indexOf("GASP") !== -1) {
-      iconHasil = `⚠️ ${hasil}`;
-    } else if (status.indexOf("LOS") !== -1) {
-      iconHasil = `❌ ${hasil}`;
+    // Logika pengecekan yang sangat ketat terhadap isi teks
+    if (statusClean.includes("SPEK")) {
+      iconHasil = `✅ ${hasilRaw}`;
+    } else if (statusClean.includes("DYING") || statusClean.includes("GASP")) {
+      iconHasil = `⚠️ ${hasilRaw}`;
+    } else if (statusClean.includes("LOS")) {
+      iconHasil = `❌ ${hasilRaw}`;
     }
 
     result += `🆔 <code>${noInternet}</code>\n`;
     result += `👤 <b>${nama}</b>\n`;
-    result += `📡 Status: <code>${status}</code> | Tgl Ukur🗓 ${tanggal}\n`;
+    result += `📡 Status: <code>${statusRaw}</code> | 🗓 ${tanggal}\n`;
     result += `📉 Redaman: <code>${redaman}</code> | ${iconHasil}\n`;
     result += `────────────────────\n`;
   }
