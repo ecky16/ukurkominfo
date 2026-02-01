@@ -51,20 +51,26 @@ async function getSheetData() {
   await doc.loadInfo();
   const sheet = doc.sheetsByTitle['PVT FFG BGES'];
   
-  // Ambil range data sesuai spreadsheet Mas Ecky
-  await sheet.loadCells('U900:AB926'); 
-  const updatedAt = sheet.getCell(899, 27).formattedValue || "-";
+  // 1. CARA OTOMATIS: Cari baris terakhir yang ada isinya
+  const rows = await sheet.getRows(); 
+  // Kita mulai dari baris 900 (index 898 karena di script mulai dari 0)
+  const startRow = 899; 
+  const lastRow = sheet.rowCount;
+
+  // 2. Load cells secara dinamis sampai baris paling bawah
+  await sheet.loadCells(`U${startRow + 1}:AB${lastRow}`); 
+  
+  const updatedAt = sheet.getCell(startRow - 1, 27).formattedValue || "-";
 
   let result = "<b>📊 UKUR HARIAN WIFI KOMINFO</b>\n";
   result += `🕒 <i>Update at: ${updatedAt}</i>\n\n`;
 
-  let countSpek = 0;
-  let countUnspek = 0;
-  let countOffline = 0;
+  let countSpek = 0, countUnspek = 0, countOffline = 0;
 
-  for (let r = 900; r <= 925; r++) {
+  // 3. Loop akan otomatis mengikuti jumlah baris yang ada
+  for (let r = startRow; r < lastRow; r++) {
     const noInternet = sheet.getCell(r, 20).formattedValue;
-    if (!noInternet) continue; 
+    if (!noInternet) continue; // Kalau kosong, berhenti atau lewati
 
     const nama = sheet.getCell(r, 21).formattedValue || "-";
     const statusVal = (sheet.getCell(r, 22).formattedValue || "").toString().toUpperCase();
