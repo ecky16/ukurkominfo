@@ -2,37 +2,29 @@ const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 
 export default async function handler(req, res) {
-  // 1. Logika Cron Job (Untuk jam 9, 12, 15, 18 via Apps Script)
   const fullUrl = new URL(req.url, `https://${req.headers.host}`);
   if (fullUrl.searchParams.get('action') === 'cron') {
     const LIST_GRUP = ["-5126863127", "-1002447926214"]; 
     try {
       const data = await getSheetData();
-      for (const id of LIST_GRUP) {
-        await sendTelegram(id, data);
-      }
+      for (const id of LIST_GRUP) { await sendTelegram(id, data); }
       return res.status(200).send('Cron Success');
-    } catch (err) {
-      return res.status(500).send('Cron Error: ' + err.message);
-    }
+    } catch (err) { return res.status(500).send(err.message); }
   }
 
-  // 2. Respon Bot Telegram Biasa
   if (req.method !== 'POST') return res.status(200).send('Bot is running...');
 
   const update = req.body;
   if (update.message && update.message.text) {
     const chatId = update.message.chat.id;
-    const msgText = update.message.text;
-
-    if (msgText === '/start' || msgText === '/cek') {
+    if (update.message.text === '/start' || update.message.text === '/cek') {
       try {
         const data = await getSheetData();
         await sendTelegram(chatId, data);
       } catch (err) {
         await sendTelegram(chatId, "❌ <b>Error:</b> " + err.message);
       }
-    } else if (msgText.startsWith('/id')) {
+    } else if (update.message.text.startsWith('/id')) {
       await sendTelegram(chatId, `🆔 ID Chat ini adalah: <code>${chatId}</code>`);
     }
   }
@@ -51,36 +43,30 @@ async function getSheetData() {
   await doc.loadInfo();
   const sheet = doc.sheetsByTitle['PVT FFG BGES'];
   
-  // 1. CARA OTOMATIS: Cari baris terakhir yang ada isinya
-  const rows = await sheet.getRows(); 
-  // Kita mulai dari baris 900 (index 898 karena di script mulai dari 0)
-  const startRow = 899; 
-  const lastRow = sheet.rowCount;
-
-  // 2. Load cells secara dinamis sampai baris paling bawah
-  await sheet.loadCells(`U${startRow + 1}:AB${lastRow}`); 
+  // Ambil semua baris. Header otomatis dianggap baris pertama (U899)
+  const rows = await sheet.getRows({ offset: 898 }); // Mulai baca dari baris data setelah header (U900)
   
-  const updatedAt = sheet.getCell(startRow - 1, 27).formattedValue || "-";
+  // Untuk Update At, kita ambil manual dari cell AB899 (Header Area)
+  await sheet.loadCells('AB899:AB899');
+  const updatedAt = sheet.getCellByA1('AB899').formattedValue || "-";
 
   let result = "<b>📊 UKUR HARIAN WIFI KOMINFO</b>\n";
   result += `🕒 <i>Update at: ${updatedAt}</i>\n\n`;
 
   let countSpek = 0, countUnspek = 0, countOffline = 0;
 
-  // 3. Loop akan otomatis mengikuti jumlah baris yang ada
-  for (let r = startRow; r < lastRow; r++) {
-    const noInternet = sheet.getCell(r, 20).formattedValue;
-    if (!noInternet) continue; // Kalau kosong, berhenti atau lewati
+  for (const row of rows) {
+    const noInternet = row.get('No internet'); // Nama kolom harus persis dengan header di Sheet
+    if (!noInternet) continue; 
 
-    const nama = sheet.getCell(r, 21).formattedValue || "-";
-    const statusVal = (sheet.getCell(r, 22).formattedValue || "").toString().toUpperCase();
-    const tanggal = sheet.getCell(r, 23).formattedValue || "-";
-    const redaman = sheet.getCell(r, 24).formattedValue || "-";
-    const hasilVal = (sheet.getCell(r, 25).formattedValue || "").toString().toUpperCase();
+    const nama = row.get('Nama Pelanggan') || "-";
+    const statusVal = (row.get('Status Layanan') || "").toString().toUpperCase();
+    const tanggal = row.get('Tanggal Ukur') || "-";
+    const redaman = row.get('Redaman') || "-";
+    const hasilVal = (row.get('HASIL UKUR') || "").toString().toUpperCase();
 
     let iconHasil = hasilVal || "-"; 
 
-    // Logika Ikon & Hitung Rekap
     if (hasilVal.includes("UNSPEK")) {
       iconHasil = `⚠️ ${hasilVal}`;
       countUnspek++;
@@ -89,13 +75,9 @@ async function getSheetData() {
       countSpek++;
     } else if (hasilVal.includes("OFFLINE")) {
       countOffline++;
-      if (statusVal.includes("DYING") || statusVal.includes("GASP")) {
-        iconHasil = `⚠️ ${hasilVal}`;
-      } else if (statusVal.includes("LOS")) {
-        iconHasil = `❌ ${hasilVal}`;
-      } else {
-        iconHasil = `❌ ${hasilVal}`;
-      }
+      if (statusVal.includes("DYING") || statusVal.includes("GASP")) iconHasil = `⚠️ ${hasilVal}`;
+      else if (statusVal.includes("LOS")) iconHasil = `❌ ${hasilVal}`;
+      else iconHasil = `❌ ${hasilVal}`;
     }
 
     result += `🆔 <code>${noInternet}</code>\n`;
@@ -109,7 +91,7 @@ async function getSheetData() {
   result += `✅ TOTAL SPEK: <b>${countSpek}</b>\n`;
   result += `⚠️ TOTAL UNSPEK: <b>${countUnspek}</b>\n`;
   result += `❌ TOTAL OFFLINE: <b>${countOffline}</b>\n`;
-  result += `\n<i>semangat bekerja </i>`;
+  result += `\n<i>Semangat kerjanya, Mas Ecky! 🚀</i>`;
 
   return result;
 }
