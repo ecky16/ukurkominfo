@@ -91,7 +91,7 @@ async function getSheetData() {
   result += `✅ TOTAL SPEK: <b>${countSpek}</b>\n`;
   result += `⚠️ TOTAL UNSPEK: <b>${countUnspek}</b>\n`;
   result += `❌ TOTAL OFFLINE: <b>${countOffline}</b>\n`;
-  result += `\n<i>Semangat kerjanya, Mas Ecky! 🚀</i>`;
+  result += `\n<i>Semangat kerjanya! 🚀</i>`;
 
   return result;
 }
