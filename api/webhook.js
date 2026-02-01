@@ -2,38 +2,33 @@ const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 
 export default async function handler(req, res) {
-  // Fitur Cron Job untuk kirim otomatis tiap jam 9, 12, 15, 18
- if (req.query.action === 'cron') {
-    // Masukkan semua ID grup Mas Ecky di dalam kurung siku ini, dipisahkan koma
+  // 1. Fitur Cron Job untuk kirim otomatis (Jam 9, 12, 15, 18)
+  if (req.query.action === 'cron') {
     const LIST_GRUP = [
       "-5126863127", 
-      "-244xxxx",
-      "-100554xxxx"
+      "-1002447926214", // Contoh ID grup
+      "-100xxxxxxxxxx"
     ]; 
 
     try {
       const data = await getSheetData();
-      
-      // Bot akan mengirim satu per satu ke semua grup di daftar
       for (const chatId of LIST_GRUP) {
         await sendTelegram(chatId, data);
       }
-      
       return res.status(200).send('Cron Success to all groups');
     } catch (err) {
       console.error("Cron Error:", err);
       return res.status(500).send('Cron Error: ' + err.message);
     }
   }
-      return res.status(500).send('Cron Error: ' + err.message);
-    }
-  }
 
+  // 2. Handler Telegram Normal
   if (req.method !== 'POST') return res.status(200).send('Bot is running...');
 
   const update = req.body;
   if (update.message && update.message.text) {
-   const msgText = update.message.text;
+    const chatId = update.message.chat.id;
+    const msgText = update.message.text;
 
     if (msgText === '/start' || msgText === '/cek') {
       try {
@@ -43,10 +38,8 @@ export default async function handler(req, res) {
         await sendTelegram(chatId, "❌ Error: " + err.message);
       }
     } 
-    // Perintah baru untuk cek ID Grup
-    else if (msgText === '/id' || msgText === '/id@UsernameBotAnda') {
+    else if (msgText.startsWith('/id')) {
       await sendTelegram(chatId, `🆔 ID Chat ini adalah: <code>${chatId}</code>`);
-    }
     }
   }
   return res.status(200).send('OK');
@@ -63,7 +56,12 @@ async function getSheetData() {
   const doc = new GoogleSpreadsheet('1d0mU2ND5xZNT0VT5wWVGnbyIM4ladD7TgRs4zaDkjeM', auth);
   await doc.loadInfo();
   const sheet = doc.sheetsByTitle['PVT FFG BGES'];
- const updatedAt = sheet.getCell(899, 27).formattedValue || "-";
+  
+  // Pastikan ambil sampai AB (kolom ke-28)
+  await sheet.loadCells('U900:AB926'); 
+
+  // Ambil data Update At dari sel AB900 (Index baris 899, kolom 27)
+  const updatedAt = sheet.getCell(899, 27).formattedValue || "-";
 
   let result = "<b>📊 UKUR HARIAN WIFI KOMINFO</b>\n";
   result += `🕒 <i>Update at: ${updatedAt}</i>\n\n`;
@@ -76,8 +74,7 @@ async function getSheetData() {
     const redaman = sheet.getCell(r, 24).formattedValue || "-";
     const hasil = sheet.getCell(r, 25).formattedValue || "-";
 
-    // --- LOGIKA IKON BARU MAS ECKY ---
-   const hasilClean = (hasil || "").toString().trim().toUpperCase();
+    const hasilClean = (hasil || "").toString().trim().toUpperCase();
     const statusClean = (status || "").toString().trim().toUpperCase();
 
     let iconHasil = hasil; 
@@ -87,7 +84,7 @@ async function getSheetData() {
       iconHasil = `✅ ${hasil}`;
     } else if (hasilClean === "OFFLINE" && statusClean === "LOS") {
       iconHasil = `❌ ${hasil}`;
-    }}
+    }
 
     result += `🆔 <code>${noInternet}</code>\n`;
     result += `👤 <b>${nama}</b>\n`;
@@ -105,5 +102,3 @@ async function sendTelegram(chatId, text) {
     body: JSON.stringify({ chat_id: chatId, text: text, parse_mode: 'HTML' })
   });
 }
-
-
