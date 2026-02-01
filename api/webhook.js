@@ -74,13 +74,16 @@ async function getSheetData() {
     const redaman = sheet.getCell(r, 24).formattedValue || "-";
     const hasil = sheet.getCell(r, 25).formattedValue || "-";
 
-    const hasilClean = (hasil || "").toString().trim().toUpperCase();
-    const statusClean = (status || "").toString().trim().toUpperCase();
+    const hasilClean = (hasil || "").toString().replace(/\s+/g, '').toUpperCase();
+    const statusClean = (status || "").toString().replace(/\s+/g, '').toUpperCase();
 
     let iconHasil = hasil; 
-    if (hasilClean === "OFFLINE" && statusClean === "DYING GASP") {
+    
+    // Logika pengecekan yang lebih kuat
+    if (hasilClean === "OFFLINE" && statusClean === "DYINGGASP") {
       iconHasil = `⚠️ ${hasil}`;
-    } else if (hasilClean === "ONLINE" && statusClean === "SPEK") {
+    } else if (statusClean === "SPEK") {
+      // Fokus ke status SPEK dulu untuk memancing centang hijau
       iconHasil = `✅ ${hasil}`;
     } else if (hasilClean === "OFFLINE" && statusClean === "LOS") {
       iconHasil = `❌ ${hasil}`;
