@@ -21,14 +21,20 @@ export default async function handler(req, res) {
     const msgText = update.message.text;
 
     if (msgText === '/start' || msgText === '/cek') {
-      // Kasih tanda kalau bot lagi kerja biar gak dikira bengong
-      await sendTelegram(chatId, "⏳ <i>Sedang mengambil data, mohon tunggu...</i>");
+      // 1. Kirim pesan awal dan simpan infonya ke variabel 'sentMsg'
+      const loadingMsg = await sendTelegram(chatId, "⏳ <i>Sedang mengambil data, mohon tunggu...</i>");
+      const loadingMsgData = await loadingMsg.json();
+      const messageId = loadingMsgData.result.message_id;
+
       try {
         const data = await getSheetData();
-        await sendTelegram(chatId, data);
+        // 2. Edit pesan tadi dengan data asli
+        await editTelegram(chatId, messageId, data);
       } catch (err) {
-        await sendTelegram(chatId, "❌ <b>Error Sheets:</b> " + err.message);
+        // Jika error, edit pesan jadi laporan error
+        await editTelegram(chatId, messageId, "❌ <b>Error Sheets:</b> " + err.message);
       }
+    
     } else if (msgText.startsWith('/id')) {
       await sendTelegram(chatId, `🆔 ID Chat ini adalah: <code>${chatId}</code>`);
     }
