@@ -1,15 +1,12 @@
 const { GoogleSpreadsheet } = require('google-spreadsheet');
-const serviceAccountAuth = new JWT({
-  email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-  // Kode ini akan merapikan format key yang berantakan dari env
-  key: process.env.GOOGLE_PRIVATE_KEY.split(String.raw`\n`).join('\n'),
-  scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
-});;
+const { JWT } = require('google-auth-library'); // Baris ini wajib ada
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
+  // Biar nggak bengong kalau diakses lewat browser (bukan POST)
+  if (req.method !== 'POST') {
+    return res.status(200).send('Bot is running...');
+  }
 
-  const TOKEN = process.env.BOT_TOKEN;
   const update = req.body;
 
   if (update.message && update.message.text) {
@@ -21,7 +18,8 @@ export default async function handler(req, res) {
         const data = await getSheetData();
         await sendTelegram(chatId, data);
       } catch (err) {
-        await sendTelegram(chatId, "Error: " + err.message);
+        console.error("Error Detail:", err); // Muncul di Logs Vercel
+        await sendTelegram(chatId, "❌ Error: " + err.message);
       }
     }
   }
@@ -30,18 +28,21 @@ export default async function handler(req, res) {
 }
 
 async function getSheetData() {
-  // Auth ke Google
-  const serviceAccountAuth = new JWT({
+  // Rapikan Key agar tidak error DECODER
+  const privateKey = process.env.GOOGLE_PRIVATE_KEY.split(String.raw`\n`).join('\n');
+  
+  const auth = new JWT({
     email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-    key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'), // Fix newline key
+    key: privateKey,
     scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
   });
 
-  const doc = new GoogleSpreadsheet('1d0mU2ND5xZNT0VT5wWVGnbyIM4ladD7TgRs4zaDkjeM', serviceAccountAuth);
-  await doc.loadInfo();
+  const doc = new GoogleSpreadsheet('1d0mU2ND5xZNT0VT5wWVGnbyIM4ladD7TgRs4zaDkjeM', auth);
   
+  await doc.loadInfo();
   const sheet = doc.sheetsByTitle['PVT FFG BGES'];
-  // Range U900:Z926 -> Baris 900-926 (index 899-925), Kolom U-Z (21-26)
+  
+  // Ambil range U900:Z926
   await sheet.loadCells('U900:Z926'); 
 
   let result = "<b>📊 LAPORAN DATA</b>\n\n";
@@ -49,16 +50,18 @@ async function getSheetData() {
 
   for (let r = 899; r <= 925; r++) {
     let rowValues = [];
-    for (let c = 20; c <= 25; c++) { // Kolom U(20) sampai Z(25)
+    for (let c = 20; c <= 25; c++) { 
       const cellValue = sheet.getCell(r, c).formattedValue || "-";
-      rowValues.push(cellValue.toString().padEnd(8));
+      rowValues.push(cellValue.toString().padEnd(10)); // Jarak 10 karakter agar lebih lega
     }
     
     let line = rowValues.join(" | ") + "\n";
     result += line;
     
-    // Header divider (baris 900)
-    if (r === 899) result += "-".repeat(line.length) + "\n";
+    // Header divider setelah baris pertama (900)
+    if (r === 899) {
+      result += "-".repeat(line.length) + "\n";
+    }
   }
 
   result += "</code>";
@@ -67,13 +70,17 @@ async function getSheetData() {
 
 async function sendTelegram(chatId, text) {
   const url = `https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendMessage`;
-  await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text: text,
-      parse_mode: 'HTML'
-    })
-  });
+  try {
+    await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: text,
+        parse_mode: 'HTML'
+      })
+    });
+  } catch (e) {
+    console.error("Fetch Error:", e);
+  }
 }
