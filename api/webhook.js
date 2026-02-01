@@ -50,30 +50,32 @@ async function getSheetData() {
   let result = "<b>📊 UKUR HARIAN WIFI KOMINFO</b>\n";
   result += `🕒 <i>Update at: ${updatedAt}</i>\n\n`;
 
-  for (let r = 900; r <= 925; r++) {
+for (let r = 900; r <= 925; r++) {
     const noInternet = sheet.getCell(r, 20).formattedValue || "-";
     const nama = sheet.getCell(r, 21).formattedValue || "-";
-    const status = sheet.getCell(r, 22).formattedValue || "-";
+    
+    // Kita ambil nilai mentah dan paksa jadi String + Huruf Besar
+    const statusRaw = sheet.getCell(r, 22).formattedValue || "";
+    const status = String(statusRaw).toUpperCase().trim();
+    
     const tanggal = sheet.getCell(r, 23).formattedValue || "-";
     const redaman = sheet.getCell(r, 24).formattedValue || "-";
     const hasil = sheet.getCell(r, 25).formattedValue || "-";
 
-    // Membersihkan spasi liar agar ikon muncul
-    const statusClean = (status || "").toString().replace(/\s+/g, '').toUpperCase();
-    const hasilClean = (hasil || "").toString().replace(/\s+/g, '').toUpperCase();
-
     let iconHasil = hasil; 
-    if (statusClean.includes("SPEK")) {
+    
+    // Logika pengecekan yang lebih longgar (loose matching)
+    if (status.indexOf("SPEK") !== -1) {
       iconHasil = `✅ ${hasil}`;
-    } else if (statusClean.includes("DYINGGASP")) {
+    } else if (status.indexOf("DYING") !== -1 || status.indexOf("GASP") !== -1) {
       iconHasil = `⚠️ ${hasil}`;
-    } else if (statusClean.includes("LOS")) {
+    } else if (status.indexOf("LOS") !== -1) {
       iconHasil = `❌ ${hasil}`;
     }
 
     result += `🆔 <code>${noInternet}</code>\n`;
     result += `👤 <b>${nama}</b>\n`;
-    result += `📡 Status: <code>${status}</code> | 🗓 ${tanggal}\n`;
+    result += `📡 Status: <code>${status}</code> | Tgl Ukur🗓 ${tanggal}\n`;
     result += `📉 Redaman: <code>${redaman}</code> | ${iconHasil}\n`;
     result += `────────────────────\n`;
   }
