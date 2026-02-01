@@ -2,27 +2,16 @@ const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 
 export default async function handler(req, res) {
-  // 1. Fitur Cron Job untuk kirim otomatis (Jam 9, 12, 15, 18)
+  // Handler untuk pemicu otomatis (nanti dipanggil dari Apps Script)
   if (req.query.action === 'cron') {
-    const LIST_GRUP = [
-      "-5126863127", 
-      "-10014", // Contoh ID grup
-      "-100xxxxxxxxxx"
-    ]; 
-
+    const LIST_GRUP = ["-5126863127", "-1002447926214"]; 
     try {
       const data = await getSheetData();
-      for (const chatId of LIST_GRUP) {
-        await sendTelegram(chatId, data);
-      }
-      return res.status(200).send('Cron Success to all groups');
-    } catch (err) {
-      console.error("Cron Error:", err);
-      return res.status(500).send('Cron Error: ' + err.message);
-    }
+      for (const chatId of LIST_GRUP) { await sendTelegram(chatId, data); }
+      return res.status(200).send('Cron Success');
+    } catch (err) { return res.status(500).send(err.message); }
   }
 
-  // 2. Handler Telegram Normal
   if (req.method !== 'POST') return res.status(200).send('Bot is running...');
 
   const update = req.body;
@@ -34,9 +23,7 @@ export default async function handler(req, res) {
       try {
         const data = await getSheetData();
         await sendTelegram(chatId, data);
-      } catch (err) {
-        await sendTelegram(chatId, "❌ Error: " + err.message);
-      }
+      } catch (err) { await sendTelegram(chatId, "❌ Error: " + err.message); }
     } 
     else if (msgText.startsWith('/id')) {
       await sendTelegram(chatId, `🆔 ID Chat ini adalah: <code>${chatId}</code>`);
@@ -57,10 +44,7 @@ async function getSheetData() {
   await doc.loadInfo();
   const sheet = doc.sheetsByTitle['PVT FFG BGES'];
   
-  // Pastikan ambil sampai AB (kolom ke-28)
   await sheet.loadCells('U900:AB926'); 
-
-  // Ambil data Update At dari sel AB900 (Index baris 899, kolom 27)
   const updatedAt = sheet.getCell(899, 27).formattedValue || "-";
 
   let result = "<b>📊 UKUR HARIAN WIFI KOMINFO</b>\n";
@@ -74,18 +58,16 @@ async function getSheetData() {
     const redaman = sheet.getCell(r, 24).formattedValue || "-";
     const hasil = sheet.getCell(r, 25).formattedValue || "-";
 
-    const hasilClean = (hasil || "").toString().replace(/\s+/g, '').toUpperCase();
+    // Membersihkan spasi liar agar ikon muncul
     const statusClean = (status || "").toString().replace(/\s+/g, '').toUpperCase();
+    const hasilClean = (hasil || "").toString().replace(/\s+/g, '').toUpperCase();
 
     let iconHasil = hasil; 
-    
-    // Logika pengecekan yang lebih kuat
-    if (hasilClean === "OFFLINE" && statusClean === "DYINGGASP") {
-      iconHasil = `⚠️ ${hasil}`;
-    } else if (statusClean === "SPEK") {
-      // Fokus ke status SPEK dulu untuk memancing centang hijau
+    if (statusClean.includes("SPEK")) {
       iconHasil = `✅ ${hasil}`;
-    } else if (hasilClean === "OFFLINE" && statusClean === "LOS") {
+    } else if (statusClean.includes("DYINGGASP")) {
+      iconHasil = `⚠️ ${hasil}`;
+    } else if (statusClean.includes("LOS")) {
       iconHasil = `❌ ${hasil}`;
     }
 
