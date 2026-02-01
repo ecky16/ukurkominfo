@@ -18,14 +18,20 @@ export default async function handler(req, res) {
 
   const update = req.body;
   if (update.message && update.message.text) {
-    const chatId = update.message.chat.id;
-    if (update.message.text === '/start' || update.message.text === '/cek') {
+   const msgText = update.message.text;
+
+    if (msgText === '/start' || msgText === '/cek') {
       try {
         const data = await getSheetData();
         await sendTelegram(chatId, data);
       } catch (err) {
         await sendTelegram(chatId, "❌ Error: " + err.message);
       }
+    } 
+    // Perintah baru untuk cek ID Grup
+    else if (msgText === '/id' || msgText === '/id@UsernameBotAnda') {
+      await sendTelegram(chatId, `🆔 ID Chat ini adalah: <code>${chatId}</code>`);
+    }
     }
   }
   return res.status(200).send('OK');
