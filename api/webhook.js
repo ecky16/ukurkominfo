@@ -6,9 +6,9 @@ export default async function handler(req, res) {
  if (req.query.action === 'cron') {
     // Masukkan semua ID grup Mas Ecky di dalam kurung siku ini, dipisahkan koma
     const LIST_GRUP = [
-      "-100123456789", 
-      "-100987654321",
-      "-100554433221"
+      "-5126863127", 
+      "-244xxxx",
+      "-100554xxxx"
     ]; 
 
     try {
