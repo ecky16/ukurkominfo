@@ -3,13 +3,28 @@ const { JWT } = require('google-auth-library');
 
 export default async function handler(req, res) {
   // Fitur Cron Job untuk kirim otomatis tiap jam 9, 12, 15, 18
-  if (req.query.action === 'cron') {
-    const GROUP_ID = "-5126863127"; // GANTI: Masukkan ID Grup Mas Ecky di sini
+ if (req.query.action === 'cron') {
+    // Masukkan semua ID grup Mas Ecky di dalam kurung siku ini, dipisahkan koma
+    const LIST_GRUP = [
+      "-100123456789", 
+      "-100987654321",
+      "-100554433221"
+    ]; 
+
     try {
       const data = await getSheetData();
-      await sendTelegram(GROUP_ID, data);
-      return res.status(200).send('Cron Success');
+      
+      // Bot akan mengirim satu per satu ke semua grup di daftar
+      for (const chatId of LIST_GRUP) {
+        await sendTelegram(chatId, data);
+      }
+      
+      return res.status(200).send('Cron Success to all groups');
     } catch (err) {
+      console.error("Cron Error:", err);
+      return res.status(500).send('Cron Error: ' + err.message);
+    }
+  }
       return res.status(500).send('Cron Error: ' + err.message);
     }
   }
