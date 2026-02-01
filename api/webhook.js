@@ -47,8 +47,8 @@ async function getSheetData() {
   const rows = await sheet.getRows({ offset: 898 }); // Mulai baca dari baris data setelah header (U900)
   
   // Untuk Update At, kita ambil manual dari cell AB899 (Header Area)
-  await sheet.loadCells('AB899:AB899');
-  const updatedAt = sheet.getCellByA1('AB899').formattedValue || "-";
+  await sheet.loadCells('u900:AB');
+  const updatedAt = sheet.getCellByA1('u900').formattedValue || "-";
 
   let result = "<b>📊 UKUR HARIAN WIFI KOMINFO</b>\n";
   result += `🕒 <i>Update at: ${updatedAt}</i>\n\n`;
