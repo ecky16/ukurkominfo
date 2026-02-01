@@ -61,13 +61,15 @@ async function getSheetData() {
     let iconHasil = hasil; 
     
     // LOGIKA PERBAIKAN: Cek kata SPEK di variabel 'hasil' (Kolom Z)
+    // LOGIKA PERBAIKAN: Cek kata SPEK atau UNSPEK di kolom Z
     const hasilClean = String(hasil).toUpperCase();
     const statusClean = String(status).toUpperCase();
 
-    if (hasilClean.includes("SPEK")) {
-      iconHasil = `✅ ${hasil}`;
+    if (hasilClean.includes("UNSPEK")) {
+      iconHasil = `⚠️ ${hasil}`; // Jika ada kata UNSPEK, beri tanda peringatan
+    } else if (hasilClean.includes("SPEK")) {
+      iconHasil = `✅ ${hasil}`; // Jika murni SPEK, beri centang hijau
     } else if (hasilClean.includes("OFFLINE")) {
-      // Cek apakah OFFLINE karena DYING GASP atau LOS
       if (statusClean.includes("DYING") || statusClean.includes("GASP")) {
         iconHasil = `⚠️ ${hasil}`;
       } else if (statusClean.includes("LOS")) {
@@ -75,11 +77,12 @@ async function getSheetData() {
       } else {
         iconHasil = `❌ ${hasil}`;
       }
+    
     }
 
     result += `🆔 <code>${noInternet}</code>\n`;
     result += `👤 <b>${nama}</b>\n`;
-    result += `📡 Status: <code>${status}</code> | 🗓 ${tanggal}\n`;
+    result += `📡 Status: <code>${status}</code> | 🗓Tgl Ukur ${tanggal}\n`;
     result += `📉 Redaman: <code>${redaman}</code> | ${iconHasil}\n`;
     result += `────────────────────\n`;
   }
