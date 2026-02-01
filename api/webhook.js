@@ -17,21 +17,23 @@ export default async function handler(req, res) {
   const update = req.body;
   if (update.message && update.message.text) {
     const chatId = update.message.chat.id;
-    if (update.message.text === '/start' || update.message.text === '/cek') {
+    const msgText = update.message.text;
+
+    if (msgText === '/start' || msgText === '/cek') {
       try {
         const data = await getSheetData();
         await sendTelegram(chatId, data);
       } catch (err) {
         await sendTelegram(chatId, "❌ <b>Error:</b> " + err.message);
       }
-    } else if (update.message.text.startsWith('/id')) {
+    } else if (msgText.startsWith('/id')) {
       await sendTelegram(chatId, `🆔 ID Chat ini adalah: <code>${chatId}</code>`);
     }
   }
   return res.status(200).send('OK');
 }
 
-asyncasync function getSheetData() {
+async function getSheetData() {
   const privateKey = process.env.GOOGLE_PRIVATE_KEY.split(String.raw`\n`).join('\n');
   const auth = new JWT({
     email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
@@ -43,26 +45,18 @@ asyncasync function getSheetData() {
   await doc.loadInfo();
   const sheet = doc.sheetsByTitle['PVT FFG BGES'];
   
-  // 1. Ambil baris terakhir secara dinamis
-  await sheet.loadCells('U899:U'); // Cek kolom U sampai bawah sendiri
-  const lastRow = sheet.rowCount;
-  
-  // 2. Load semua data dari baris 900 sampai baris terakhir yang terdeteksi
-  await sheet.loadCells(`U899:AB${lastRow}`); 
-  
-  // Ambil waktu update di AB899
-  const updatedAt = sheet.getCell(898, 27).formattedValue || "-";
+  // KEMBALI KE MANUAL: Hanya ambil baris 900 sampai 926
+  await sheet.loadCells('U900:AB926'); 
+  const updatedAt = sheet.getCell(899, 27).formattedValue || "-";
 
   let result = "<b>📊 UKUR HARIAN WIFI KOMINFO</b>\n";
   result += `🕒 <i>Update at: ${updatedAt}</i>\n\n`;
 
   let countSpek = 0, countUnspek = 0, countOffline = 0;
 
-  for (let r = 899; r < lastRow; r++) {
+  for (let r = 900; r <= 925; r++) {
     const noInternet = sheet.getCell(r, 20).formattedValue;
-    
-    // Jika kolom No Internet kosong, berarti sudah habis datanya
-    if (!noInternet || noInternet === "-") continue; 
+    if (!noInternet) continue; 
 
     const nama = sheet.getCell(r, 21).formattedValue || "-";
     const statusVal = (sheet.getCell(r, 22).formattedValue || "").toString().toUpperCase();
@@ -80,19 +74,15 @@ asyncasync function getSheetData() {
       countSpek++;
     } else if (hasilVal.includes("OFFLINE")) {
       countOffline++;
-      if (statusVal.includes("DYING") || statusVal.includes("GASP")) {
-        iconHasil = `⚠️ ${hasilVal}`;
-      } else if (statusVal.includes("LOS")) {
-        iconHasil = `❌ ${hasilVal}`;
-      } else {
-        iconHasil = `❌ ${hasilVal}`;
-      }
+      if (statusVal.includes("DYING") || statusVal.includes("GASP")) iconHasil = `⚠️ ${hasilVal}`;
+      else if (statusVal.includes("LOS")) iconHasil = `❌ ${hasilVal}`;
+      else iconHasil = `❌ ${hasilVal}`;
     }
 
     result += `🆔 <code>${noInternet}</code>\n👤 <b>${nama}</b>\n📡 Status: <code>${statusVal}</code> | 🗓 ${tanggal}\n📉 Redaman: <code>${redaman}</code> | ${iconHasil}\n────────────────────\n`;
   }
 
-  result += `\n<b>📝 RINGKASAN STATUS:</b>\n✅ SPEK: <b>${countSpek}</b> | ⚠️ UNSPEK: <b>${countUnspek}</b> | ❌ OFFLINE: <b>${countOffline}</b>`;
+  result += `\n<b>📝 RINGKASAN STATUS:</b>\n✅ SPEK: <b>${countSpek}</b> | ⚠️ UNSPEK: <b>${countUnspek}</b> | ❌ OFFLINE: <b>${countOffline}</b>\n\n<i>bismillah</i>`;
   return result;
 }
 
