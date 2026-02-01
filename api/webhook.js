@@ -63,9 +63,10 @@ async function getSheetData() {
   const doc = new GoogleSpreadsheet('1d0mU2ND5xZNT0VT5wWVGnbyIM4ladD7TgRs4zaDkjeM', auth);
   await doc.loadInfo();
   const sheet = doc.sheetsByTitle['PVT FFG BGES'];
-  await sheet.loadCells('U900:Z926'); 
+ const updatedAt = sheet.getCell(899, 27).formattedValue || "-";
 
-  let result = "<b>📊 LAPORAN DATA (PVT FFG BGES)</b>\n\n";
+  let result = "<b>📊 LAPORAN DATA (PVT FFG BGES)</b>\n";
+  result += `🕒 <i>Update at: ${updatedAt}</i>\n\n`;
 
   for (let r = 900; r <= 925; r++) {
     const noInternet = sheet.getCell(r, 20).formattedValue || "-";
