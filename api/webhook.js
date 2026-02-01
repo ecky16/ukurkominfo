@@ -2,17 +2,22 @@ const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 
 export default async function handler(req, res) {
-  // 1. Jalankan fungsi Cron
+  // 1. Logika Cron Job (Untuk jam 9, 12, 15, 18 via Apps Script)
   const fullUrl = new URL(req.url, `https://${req.headers.host}`);
   if (fullUrl.searchParams.get('action') === 'cron') {
     const LIST_GRUP = ["-5126863127", "-1002447926214"]; 
     try {
       const data = await getSheetData();
-      for (const id of LIST_GRUP) { await sendTelegram(id, data); }
+      for (const id of LIST_GRUP) {
+        await sendTelegram(id, data);
+      }
       return res.status(200).send('Cron Success');
-    } catch (err) { return res.status(500).send(err.message); }
+    } catch (err) {
+      return res.status(500).send('Cron Error: ' + err.message);
+    }
   }
 
+  // 2. Respon Bot Telegram Biasa
   if (req.method !== 'POST') return res.status(200).send('Bot is running...');
 
   const update = req.body;
@@ -21,20 +26,12 @@ export default async function handler(req, res) {
     const msgText = update.message.text;
 
     if (msgText === '/start' || msgText === '/cek') {
-      // 1. Kirim pesan awal dan simpan infonya ke variabel 'sentMsg'
-      const loadingMsg = await sendTelegram(chatId, "⏳ <i>Sedang mengambil data, mohon tunggu...</i>");
-      const loadingMsgData = await loadingMsg.json();
-      const messageId = loadingMsgData.result.message_id;
-
       try {
         const data = await getSheetData();
-        // 2. Edit pesan tadi dengan data asli
-        await editTelegram(chatId, messageId, data);
+        await sendTelegram(chatId, data);
       } catch (err) {
-        // Jika error, edit pesan jadi laporan error
-        await editTelegram(chatId, messageId, "❌ <b>Error Sheets:</b> " + err.message);
+        await sendTelegram(chatId, "❌ <b>Error:</b> " + err.message);
       }
-    
     } else if (msgText.startsWith('/id')) {
       await sendTelegram(chatId, `🆔 ID Chat ini adalah: <code>${chatId}</code>`);
     }
@@ -54,17 +51,21 @@ async function getSheetData() {
   await doc.loadInfo();
   const sheet = doc.sheetsByTitle['PVT FFG BGES'];
   
-  // OPTIMASI: Hanya ambil baris yang diperlukan agar hemat RAM
+  // Ambil range data sesuai spreadsheet Mas Ecky
   await sheet.loadCells('U900:AB926'); 
   const updatedAt = sheet.getCell(899, 27).formattedValue || "-";
 
   let result = "<b>📊 UKUR HARIAN WIFI KOMINFO</b>\n";
   result += `🕒 <i>Update at: ${updatedAt}</i>\n\n`;
 
-  let countSpek = 0, countUnspek = 0, countOffline = 0;
+  let countSpek = 0;
+  let countUnspek = 0;
+  let countOffline = 0;
 
   for (let r = 900; r <= 925; r++) {
-    const noInternet = sheet.getCell(r, 20).formattedValue || "-";
+    const noInternet = sheet.getCell(r, 20).formattedValue;
+    if (!noInternet) continue; 
+
     const nama = sheet.getCell(r, 21).formattedValue || "-";
     const statusVal = (sheet.getCell(r, 22).formattedValue || "").toString().toUpperCase();
     const tanggal = sheet.getCell(r, 23).formattedValue || "-";
@@ -73,6 +74,7 @@ async function getSheetData() {
 
     let iconHasil = hasilVal || "-"; 
 
+    // Logika Ikon & Hitung Rekap
     if (hasilVal.includes("UNSPEK")) {
       iconHasil = `⚠️ ${hasilVal}`;
       countUnspek++;
@@ -92,7 +94,7 @@ async function getSheetData() {
 
     result += `🆔 <code>${noInternet}</code>\n`;
     result += `👤 <b>${nama}</b>\n`;
-    result += `📡 Status: <code>${statusVal}</code> | 🗓 Tgl Ukur ${tanggal}\n`;
+    result += `📡 Status: <code>${statusVal}</code> | 🗓 ${tanggal}\n`;
     result += `📉 Redaman: <code>${redaman}</code> | ${iconHasil}\n`;
     result += `────────────────────\n`;
   }
@@ -101,6 +103,7 @@ async function getSheetData() {
   result += `✅ TOTAL SPEK: <b>${countSpek}</b>\n`;
   result += `⚠️ TOTAL UNSPEK: <b>${countUnspek}</b>\n`;
   result += `❌ TOTAL OFFLINE: <b>${countOffline}</b>\n`;
+  result += `\n<i>Semangat kerjanya, Mas Ecky! 🚀</i>`;
 
   return result;
 }
@@ -110,19 +113,5 @@ async function sendTelegram(chatId, text) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ chat_id: chatId, text: text, parse_mode: 'HTML' })
-  });
-}
-
-
-async function editTelegram(chatId, messageId, text) {
-  return await fetch(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/editMessageText`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ 
-      chat_id: chatId, 
-      message_id: messageId, 
-      text: text, 
-      parse_mode: 'HTML' 
-    })
   });
 }
