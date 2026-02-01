@@ -112,3 +112,17 @@ async function sendTelegram(chatId, text) {
     body: JSON.stringify({ chat_id: chatId, text: text, parse_mode: 'HTML' })
   });
 }
+
+
+async function editTelegram(chatId, messageId, text) {
+  return await fetch(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/editMessageText`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ 
+      chat_id: chatId, 
+      message_id: messageId, 
+      text: text, 
+      parse_mode: 'HTML' 
+    })
+  });
+}
