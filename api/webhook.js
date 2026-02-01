@@ -76,7 +76,7 @@ for (let r = 900; r <= 925; r++) {
 
     result += `🆔 <code>${noInternet}</code>\n`;
     result += `👤 <b>${nama}</b>\n`;
-    result += `📡 Status: <code>${statusRaw}</code> | 🗓 ${tanggal}\n`;
+    result += `📡 Status: <code>${statusRaw}</code> | 🗓Tgl Update ${tanggal}\n`;
     result += `📉 Redaman: <code>${redaman}</code> | ${iconHasil}\n`;
     result += `────────────────────\n`;
   }
