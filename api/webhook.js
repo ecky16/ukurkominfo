@@ -58,15 +58,17 @@ asyncasync function getSheetData() {
 
   let countSpek = 0, countUnspek = 0, countOffline = 0;
 
-  for (const row of rows) {
-    const noInternet = row.get('No internet'); // Nama kolom harus persis dengan header di Sheet
-    if (!noInternet) continue; 
+  for (let r = 899; r < lastRow; r++) {
+    const noInternet = sheet.getCell(r, 20).formattedValue;
+    
+    // Jika kolom No Internet kosong, berarti sudah habis datanya
+    if (!noInternet || noInternet === "-") continue; 
 
-    const nama = row.get('Nama Pelanggan') || "-";
-    const statusVal = (row.get('Status Layanan') || "").toString().toUpperCase();
-    const tanggal = row.get('Tanggal Ukur') || "-";
-    const redaman = row.get('Redaman') || "-";
-    const hasilVal = (row.get('HASIL UKUR') || "").toString().toUpperCase();
+    const nama = sheet.getCell(r, 21).formattedValue || "-";
+    const statusVal = (sheet.getCell(r, 22).formattedValue || "").toString().toUpperCase();
+    const tanggal = sheet.getCell(r, 23).formattedValue || "-";
+    const redaman = sheet.getCell(r, 24).formattedValue || "-";
+    const hasilVal = (sheet.getCell(r, 25).formattedValue || "").toString().toUpperCase();
 
     let iconHasil = hasilVal || "-"; 
 
@@ -78,24 +80,19 @@ asyncasync function getSheetData() {
       countSpek++;
     } else if (hasilVal.includes("OFFLINE")) {
       countOffline++;
-      if (statusVal.includes("DYING") || statusVal.includes("GASP")) iconHasil = `⚠️ ${hasilVal}`;
-      else if (statusVal.includes("LOS")) iconHasil = `❌ ${hasilVal}`;
-      else iconHasil = `❌ ${hasilVal}`;
+      if (statusVal.includes("DYING") || statusVal.includes("GASP")) {
+        iconHasil = `⚠️ ${hasilVal}`;
+      } else if (statusVal.includes("LOS")) {
+        iconHasil = `❌ ${hasilVal}`;
+      } else {
+        iconHasil = `❌ ${hasilVal}`;
+      }
     }
 
-    result += `🆔 <code>${noInternet}</code>\n`;
-    result += `👤 <b>${nama}</b>\n`;
-    result += `📡 Status: <code>${statusVal}</code> | 🗓 ${tanggal}\n`;
-    result += `📉 Redaman: <code>${redaman}</code> | ${iconHasil}\n`;
-    result += `────────────────────\n`;
+    result += `🆔 <code>${noInternet}</code>\n👤 <b>${nama}</b>\n📡 Status: <code>${statusVal}</code> | 🗓 ${tanggal}\n📉 Redaman: <code>${redaman}</code> | ${iconHasil}\n────────────────────\n`;
   }
 
-  result += `\n<b>📝 RINGKASAN STATUS:</b>\n`;
-  result += `✅ TOTAL SPEK: <b>${countSpek}</b>\n`;
-  result += `⚠️ TOTAL UNSPEK: <b>${countUnspek}</b>\n`;
-  result += `❌ TOTAL OFFLINE: <b>${countOffline}</b>\n`;
-  result += `\n<i>Semangat kerjanya! 🚀</i>`;
-
+  result += `\n<b>📝 RINGKASAN STATUS:</b>\n✅ SPEK: <b>${countSpek}</b> | ⚠️ UNSPEK: <b>${countUnspek}</b> | ❌ OFFLINE: <b>${countOffline}</b>`;
   return result;
 }
 
