@@ -45,7 +45,7 @@ async function getSheetData() {
   // Ambil range U900:Z926
   await sheet.loadCells('U900:Z926'); 
 
-  let result = "<b>📊 LAPORAN DATA (PVT FFG BGES)</b>\n\n";
+  let result = "<b>📊 UKUR HARIAN WIFI GRATIS KOMINFO </b>\n\n";
 
   // Kita mulai dari baris 901 (index 900) karena baris 900 (index 899) adalah header
   for (let r = 900; r <= 925; r++) {
