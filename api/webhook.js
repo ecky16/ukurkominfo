@@ -65,7 +65,7 @@ async function getSheetData() {
   const sheet = doc.sheetsByTitle['PVT FFG BGES'];
  const updatedAt = sheet.getCell(899, 27).formattedValue || "-";
 
-  let result = "<b>📊 LAPORAN DATA (PVT FFG BGES)</b>\n";
+  let result = "<b>📊 UKUR HARIAN WIFI KOMINFO</b>\n";
   result += `🕒 <i>Update at: ${updatedAt}</i>\n\n`;
 
   for (let r = 900; r <= 925; r++) {
@@ -77,14 +77,17 @@ async function getSheetData() {
     const hasil = sheet.getCell(r, 25).formattedValue || "-";
 
     // --- LOGIKA IKON BARU MAS ECKY ---
+   const hasilClean = (hasil || "").toString().trim().toUpperCase();
+    const statusClean = (status || "").toString().trim().toUpperCase();
+
     let iconHasil = hasil; 
-    if (hasil === "OFFLINE" && status === "DYING GASP") {
+    if (hasilClean === "OFFLINE" && statusClean === "DYING GASP") {
       iconHasil = `⚠️ ${hasil}`;
-    } else if (hasil === "SPEK" && status === "ONLINE") {
+    } else if (hasilClean === "ONLINE" && statusClean === "SPEK") {
       iconHasil = `✅ ${hasil}`;
-    } else if (hasil === "OFFLINE" && status === "LOS") {
+    } else if (hasilClean === "OFFLINE" && statusClean === "LOS") {
       iconHasil = `❌ ${hasil}`;
-    }
+    }}
 
     result += `🆔 <code>${noInternet}</code>\n`;
     result += `👤 <b>${nama}</b>\n`;
