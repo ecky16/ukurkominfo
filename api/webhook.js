@@ -1,3 +1,36 @@
+const { GoogleSpreadsheet } = require('google-spreadsheet');
+const { JWT } = require('google-auth-library');
+
+export default async function handler(req, res) {
+  if (req.query.action === 'cron') {
+    const LIST_GRUP = ["-5126863127", "-1002447926214"]; 
+    try {
+      const data = await getSheetData();
+      for (const chatId of LIST_GRUP) { await sendTelegram(chatId, data); }
+      return res.status(200).send('Cron Success');
+    } catch (err) { return res.status(500).send(err.message); }
+  }
+
+  if (req.method !== 'POST') return res.status(200).send('Bot is running...');
+
+  const update = req.body;
+  if (update.message && update.message.text) {
+    const chatId = update.message.chat.id;
+    const msgText = update.message.text;
+
+    if (msgText === '/start' || msgText === '/cek') {
+      try {
+        const data = await getSheetData();
+        await sendTelegram(chatId, data);
+      } catch (err) { await sendTelegram(chatId, "❌ Error: " + err.message); }
+    } 
+    else if (msgText.startsWith('/id')) {
+      await sendTelegram(chatId, `🆔 ID Chat ini adalah: <code>${chatId}</code>`);
+    }
+  }
+  return res.status(200).send('OK');
+}
+
 async function getSheetData() {
   const privateKey = process.env.GOOGLE_PRIVATE_KEY.split(String.raw`\n`).join('\n');
   const auth = new JWT({
@@ -46,9 +79,17 @@ async function getSheetData() {
 
     result += `🆔 <code>${noInternet}</code>\n`;
     result += `👤 <b>${nama}</b>\n`;
-    result += `📡 Status: <code>${status}</code> | 🗓Tgl Ukur ${tanggal}\n`;
+    result += `📡 Status: <code>${status}</code> | 🗓 ${tanggal}\n`;
     result += `📉 Redaman: <code>${redaman}</code> | ${iconHasil}\n`;
     result += `────────────────────\n`;
   }
   return result;
+}
+
+async function sendTelegram(chatId, text) {
+  await fetch(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: chatId, text: text, parse_mode: 'HTML' })
+  });
 }
