@@ -1,8 +1,7 @@
 const { GoogleSpreadsheet } = require('google-spreadsheet');
-const { JWT } = require('google-auth-library'); // Baris ini wajib ada
+const { JWT } = require('google-auth-library');
 
 export default async function handler(req, res) {
-  // Biar nggak bengong kalau diakses lewat browser (bukan POST)
   if (req.method !== 'POST') {
     return res.status(200).send('Bot is running...');
   }
@@ -18,7 +17,7 @@ export default async function handler(req, res) {
         const data = await getSheetData();
         await sendTelegram(chatId, data);
       } catch (err) {
-        console.error("Error Detail:", err); // Muncul di Logs Vercel
+        console.error("Error Detail:", err);
         await sendTelegram(chatId, "❌ Error: " + err.message);
       }
     }
@@ -43,11 +42,12 @@ async function getSheetData() {
   await doc.loadInfo();
   const sheet = doc.sheetsByTitle['PVT FFG BGES'];
   
+  // Ambil range U900:Z926
   await sheet.loadCells('U900:Z926'); 
 
   let result = "<b>📊 LAPORAN DATA (PVT FFG BGES)</b>\n\n";
 
-  // Kita mulai dari baris 901 (index 900) karena 900 (index 899) adalah header
+  // Kita mulai dari baris 901 (index 900) karena baris 900 (index 899) adalah header
   for (let r = 900; r <= 925; r++) {
     const noInternet = sheet.getCell(r, 20).formattedValue || "-";
     const nama = sheet.getCell(r, 21).formattedValue || "-";
@@ -56,7 +56,7 @@ async function getSheetData() {
     const redaman = sheet.getCell(r, 24).formattedValue || "-";
     const hasil = sheet.getCell(r, 25).formattedValue || "-";
 
-    // Format dibuat List per Item agar tidak berantakan di HP
+    // Format List Vertikal agar rapi di layar HP
     result += `🆔 <code>${noInternet}</code>\n`;
     result += `👤 <b>${nama}</b>\n`;
     result += `📡 Status: <code>${status}</code> | 🗓 ${tanggal}\n`;
@@ -64,37 +64,6 @@ async function getSheetData() {
     result += `────────────────────\n`;
   }
 
-  return result;
-}
-  
-  // ... sisa kode di bawahnya tetap sama;
-  
-  await doc.loadInfo();
-  const sheet = doc.sheetsByTitle['PVT FFG BGES'];
-  
-  // Ambil range U900:Z926
-  await sheet.loadCells('U900:Z926'); 
-
-  let result = "<b>📊 LAPORAN DATA</b>\n\n";
-  result += "<code>";
-
-  for (let r = 899; r <= 925; r++) {
-    let rowValues = [];
-    for (let c = 20; c <= 25; c++) { 
-      const cellValue = sheet.getCell(r, c).formattedValue || "-";
-      rowValues.push(cellValue.toString().padEnd(10)); // Jarak 10 karakter agar lebih lega
-    }
-    
-    let line = rowValues.join(" | ") + "\n";
-    result += line;
-    
-    // Header divider setelah baris pertama (900)
-    if (r === 899) {
-      result += "-".repeat(line.length) + "\n";
-    }
-  }
-
-  result += "</code>";
   return result;
 }
 
