@@ -2,36 +2,36 @@ const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 
 export default async function handler(req, res) {
-  // 1. Logika Cron Job (Trigger dari Apps Script)
+  // 1. Jalankan fungsi Cron jika ada parameter ?action=cron
   if (req.query.action === 'cron') {
     const LIST_GRUP = ["-5126863127", "-1002447926214"]; 
     try {
       const data = await getSheetData();
-      for (const id of LIST_GRUP) { 
-        await sendTelegram(id, data); 
+      for (const id of LIST_GRUP) {
+        await sendTelegram(id, data);
       }
       return res.status(200).send('Cron Success');
-    } catch (err) { 
-      return res.status(500).send(err.message); 
+    } catch (err) {
+      return res.status(500).send('Cron Error: ' + err.message);
     }
   }
 
+  // 2. Respon Bot Telegram Biasa
   if (req.method !== 'POST') return res.status(200).send('Bot is running...');
 
   const update = req.body;
   if (update.message && update.message.text) {
-    const chatId = update.message.chat.id; // Definisi chatId di sini
+    const chatId = update.message.chat.id;
     const msgText = update.message.text;
 
     if (msgText === '/start' || msgText === '/cek') {
       try {
         const data = await getSheetData();
         await sendTelegram(chatId, data);
-      } catch (err) { 
-        await sendTelegram(chatId, "❌ Error: " + err.message); 
+      } catch (err) {
+        await sendTelegram(chatId, "❌ Error: " + err.message);
       }
-    } 
-    else if (msgText.startsWith('/id')) {
+    } else if (msgText.startsWith('/id')) {
       await sendTelegram(chatId, `🆔 ID Chat ini adalah: <code>${chatId}</code>`);
     }
   }
@@ -50,6 +50,7 @@ async function getSheetData() {
   await doc.loadInfo();
   const sheet = doc.sheetsByTitle['PVT FFG BGES'];
   
+  // Ambil range U900:AB926 sesuai data Mas Ecky
   await sheet.loadCells('U900:AB926'); 
   const updatedAt = sheet.getCell(899, 27).formattedValue || "-";
 
@@ -72,6 +73,7 @@ async function getSheetData() {
     const hasilClean = String(hasil).toUpperCase();
     const statusClean = String(status).toUpperCase();
 
+    // Logika Ikon & Hitung Rekap
     if (hasilClean.includes("UNSPEK")) {
       iconHasil = `⚠️ ${hasil}`;
       countUnspek++;
