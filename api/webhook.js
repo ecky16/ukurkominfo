@@ -1,5 +1,10 @@
 const { GoogleSpreadsheet } = require('google-spreadsheet');
-const { JWT } = require('google-auth-library');
+const serviceAccountAuth = new JWT({
+  email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+  // Kode ini akan merapikan format key yang berantakan dari env
+  key: process.env.GOOGLE_PRIVATE_KEY.split(String.raw`\n`).join('\n'),
+  scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
+});;
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
