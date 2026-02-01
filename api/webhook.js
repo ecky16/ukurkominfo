@@ -2,16 +2,22 @@ const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 
 export default async function handler(req, res) {
+  // 1. Logika Cron Job (Untuk jam 9, 12, 15, 18 via Apps Script)
   const fullUrl = new URL(req.url, `https://${req.headers.host}`);
   if (fullUrl.searchParams.get('action') === 'cron') {
     const LIST_GRUP = ["-5126863127", "-1002447926214"]; 
     try {
       const data = await getSheetData();
-      for (const id of LIST_GRUP) { await sendTelegram(id, data); }
+      for (const id of LIST_GRUP) {
+        await sendTelegram(id, data);
+      }
       return res.status(200).send('Cron Success');
-    } catch (err) { return res.status(500).send(err.message); }
+    } catch (err) {
+      return res.status(500).send('Cron Error: ' + err.message);
+    }
   }
 
+  // 2. Respon Bot Telegram Biasa
   if (req.method !== 'POST') return res.status(200).send('Bot is running...');
 
   const update = req.body;
@@ -45,14 +51,16 @@ async function getSheetData() {
   await doc.loadInfo();
   const sheet = doc.sheetsByTitle['PVT FFG BGES'];
   
-  // KEMBALI KE MANUAL: Hanya ambil baris 900 sampai 926
+  // Ambil range data sesuai spreadsheet Mas Ecky
   await sheet.loadCells('U900:AB926'); 
   const updatedAt = sheet.getCell(899, 27).formattedValue || "-";
 
   let result = "<b>📊 UKUR HARIAN WIFI KOMINFO</b>\n";
   result += `🕒 <i>Update at: ${updatedAt}</i>\n\n`;
 
-  let countSpek = 0, countUnspek = 0, countOffline = 0;
+  let countSpek = 0;
+  let countUnspek = 0;
+  let countOffline = 0;
 
   for (let r = 900; r <= 925; r++) {
     const noInternet = sheet.getCell(r, 20).formattedValue;
@@ -66,6 +74,7 @@ async function getSheetData() {
 
     let iconHasil = hasilVal || "-"; 
 
+    // Logika Ikon & Hitung Rekap
     if (hasilVal.includes("UNSPEK")) {
       iconHasil = `⚠️ ${hasilVal}`;
       countUnspek++;
@@ -74,15 +83,28 @@ async function getSheetData() {
       countSpek++;
     } else if (hasilVal.includes("OFFLINE")) {
       countOffline++;
-      if (statusVal.includes("DYING") || statusVal.includes("GASP")) iconHasil = `⚠️ ${hasilVal}`;
-      else if (statusVal.includes("LOS")) iconHasil = `❌ ${hasilVal}`;
-      else iconHasil = `❌ ${hasilVal}`;
+      if (statusVal.includes("DYING") || statusVal.includes("GASP")) {
+        iconHasil = `⚠️ ${hasilVal}`;
+      } else if (statusVal.includes("LOS")) {
+        iconHasil = `❌ ${hasilVal}`;
+      } else {
+        iconHasil = `❌ ${hasilVal}`;
+      }
     }
 
-    result += `🆔 <code>${noInternet}</code>\n👤 <b>${nama}</b>\n📡 Status: <code>${statusVal}</code> | 🗓 ${tanggal}\n📉 Redaman: <code>${redaman}</code> | ${iconHasil}\n────────────────────\n`;
+    result += `🆔 <code>${noInternet}</code>\n`;
+    result += `👤 <b>${nama}</b>\n`;
+    result += `📡 Status: <code>${statusVal}</code> | 🗓 ${tanggal}\n`;
+    result += `📉 Redaman: <code>${redaman}</code> | ${iconHasil}\n`;
+    result += `────────────────────\n`;
   }
 
-  result += `\n<b>📝 RINGKASAN STATUS:</b>\n✅ SPEK: <b>${countSpek}</b> | ⚠️ UNSPEK: <b>${countUnspek}</b> | ❌ OFFLINE: <b>${countOffline}</b>\n\n<i>bismillah</i>`;
+  result += `\n<b>📝 RINGKASAN STATUS:</b>\n`;
+  result += `✅ TOTAL SPEK: <b>${countSpek}</b>\n`;
+  result += `⚠️ TOTAL UNSPEK: <b>${countUnspek}</b>\n`;
+  result += `❌ TOTAL OFFLINE: <b>${countOffline}</b>\n`;
+  result += `\n<i>semangat bekerja </i>`;
+
   return result;
 }
 
