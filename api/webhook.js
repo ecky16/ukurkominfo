@@ -2,22 +2,17 @@ const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 
 export default async function handler(req, res) {
-  // 1. Logika Cron Job (Gunakan URL object untuk menghindari Warning)
+  // 1. Jalankan fungsi Cron
   const fullUrl = new URL(req.url, `https://${req.headers.host}`);
   if (fullUrl.searchParams.get('action') === 'cron') {
     const LIST_GRUP = ["-5126863127", "-1002447926214"]; 
     try {
       const data = await getSheetData();
-      for (const id of LIST_GRUP) {
-        await sendTelegram(id, data);
-      }
+      for (const id of LIST_GRUP) { await sendTelegram(id, data); }
       return res.status(200).send('Cron Success');
-    } catch (err) {
-      return res.status(500).send('Cron Error: ' + err.message);
-    }
+    } catch (err) { return res.status(500).send(err.message); }
   }
 
-  // 2. Respon Bot Telegram
   if (req.method !== 'POST') return res.status(200).send('Bot is running...');
 
   const update = req.body;
@@ -26,11 +21,13 @@ export default async function handler(req, res) {
     const msgText = update.message.text;
 
     if (msgText === '/start' || msgText === '/cek') {
+      // Kasih tanda kalau bot lagi kerja biar gak dikira bengong
+      await sendTelegram(chatId, "⏳ <i>Sedang mengambil data, mohon tunggu...</i>");
       try {
         const data = await getSheetData();
         await sendTelegram(chatId, data);
       } catch (err) {
-        await sendTelegram(chatId, "❌ Error: " + err.message);
+        await sendTelegram(chatId, "❌ <b>Error Sheets:</b> " + err.message);
       }
     } else if (msgText.startsWith('/id')) {
       await sendTelegram(chatId, `🆔 ID Chat ini adalah: <code>${chatId}</code>`);
@@ -51,47 +48,45 @@ async function getSheetData() {
   await doc.loadInfo();
   const sheet = doc.sheetsByTitle['PVT FFG BGES'];
   
+  // OPTIMASI: Hanya ambil baris yang diperlukan agar hemat RAM
   await sheet.loadCells('U900:AB926'); 
   const updatedAt = sheet.getCell(899, 27).formattedValue || "-";
 
   let result = "<b>📊 UKUR HARIAN WIFI KOMINFO</b>\n";
   result += `🕒 <i>Update at: ${updatedAt}</i>\n\n`;
 
-  let countSpek = 0;
-  let countUnspek = 0;
-  let countOffline = 0;
+  let countSpek = 0, countUnspek = 0, countOffline = 0;
 
   for (let r = 900; r <= 925; r++) {
     const noInternet = sheet.getCell(r, 20).formattedValue || "-";
     const nama = sheet.getCell(r, 21).formattedValue || "-";
-    const status = (sheet.getCell(r, 22).formattedValue || "").toString().toUpperCase();
+    const statusVal = (sheet.getCell(r, 22).formattedValue || "").toString().toUpperCase();
     const tanggal = sheet.getCell(r, 23).formattedValue || "-";
     const redaman = sheet.getCell(r, 24).formattedValue || "-";
-    const hasil = (sheet.getCell(r, 25).formattedValue || "").toString().toUpperCase();
+    const hasilVal = (sheet.getCell(r, 25).formattedValue || "").toString().toUpperCase();
 
-    let iconHasil = hasil || "-"; 
+    let iconHasil = hasilVal || "-"; 
 
-    // Logika Ikon & Hitung Rekap
-    if (hasil.includes("UNSPEK")) {
-      iconHasil = `⚠️ ${hasil}`;
+    if (hasilVal.includes("UNSPEK")) {
+      iconHasil = `⚠️ ${hasilVal}`;
       countUnspek++;
-    } else if (hasil.includes("SPEK")) {
-      iconHasil = `✅ ${hasil}`;
+    } else if (hasilVal.includes("SPEK")) {
+      iconHasil = `✅ ${hasilVal}`;
       countSpek++;
-    } else if (hasil.includes("OFFLINE")) {
+    } else if (hasilVal.includes("OFFLINE")) {
       countOffline++;
-      if (status.includes("DYING") || status.includes("GASP")) {
-        iconHasil = `⚠️ ${hasil}`;
-      } else if (status.includes("LOS")) {
-        iconHasil = `❌ ${hasil}`;
+      if (statusVal.includes("DYING") || statusVal.includes("GASP")) {
+        iconHasil = `⚠️ ${hasilVal}`;
+      } else if (statusVal.includes("LOS")) {
+        iconHasil = `❌ ${hasilVal}`;
       } else {
-        iconHasil = `❌ ${hasil}`;
+        iconHasil = `❌ ${hasilVal}`;
       }
     }
 
     result += `🆔 <code>${noInternet}</code>\n`;
     result += `👤 <b>${nama}</b>\n`;
-    result += `📡 Status: <code>${status}</code> | 🗓 Tgl Ukur ${tanggal}\n`;
+    result += `📡 Status: <code>${statusVal}</code> | 🗓 Tgl Ukur ${tanggal}\n`;
     result += `📉 Redaman: <code>${redaman}</code> | ${iconHasil}\n`;
     result += `────────────────────\n`;
   }
@@ -100,13 +95,12 @@ async function getSheetData() {
   result += `✅ TOTAL SPEK: <b>${countSpek}</b>\n`;
   result += `⚠️ TOTAL UNSPEK: <b>${countUnspek}</b>\n`;
   result += `❌ TOTAL OFFLINE: <b>${countOffline}</b>\n`;
-  result += `\n<i>Semangat kerjanya teman teman!!! 🚀</i>`;
 
   return result;
 }
 
 async function sendTelegram(chatId, text) {
-  await fetch(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendMessage`, {
+  return await fetch(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendMessage`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ chat_id: chatId, text: text, parse_mode: 'HTML' })
