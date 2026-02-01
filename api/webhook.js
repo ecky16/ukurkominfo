@@ -31,7 +31,7 @@ export default async function handler(req, res) {
   return res.status(200).send('OK');
 }
 
-async function getSheetData() {
+asyncasync function getSheetData() {
   const privateKey = process.env.GOOGLE_PRIVATE_KEY.split(String.raw`\n`).join('\n');
   const auth = new JWT({
     email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
@@ -43,12 +43,15 @@ async function getSheetData() {
   await doc.loadInfo();
   const sheet = doc.sheetsByTitle['PVT FFG BGES'];
   
-  // Ambil semua baris. Header otomatis dianggap baris pertama (U899)
-  const rows = await sheet.getRows({ offset: 898 }); // Mulai baca dari baris data setelah header (U900)
+  // 1. Ambil baris terakhir secara dinamis
+  await sheet.loadCells('U899:U'); // Cek kolom U sampai bawah sendiri
+  const lastRow = sheet.rowCount;
   
-  // Untuk Update At, kita ambil manual dari cell AB899 (Header Area)
-  await sheet.loadCells('u900:AB');
-  const updatedAt = sheet.getCellByA1('u900').formattedValue || "-";
+  // 2. Load semua data dari baris 900 sampai baris terakhir yang terdeteksi
+  await sheet.loadCells(`U899:AB${lastRow}`); 
+  
+  // Ambil waktu update di AB899
+  const updatedAt = sheet.getCell(898, 27).formattedValue || "-";
 
   let result = "<b>📊 UKUR HARIAN WIFI KOMINFO</b>\n";
   result += `🕒 <i>Update at: ${updatedAt}</i>\n\n`;
