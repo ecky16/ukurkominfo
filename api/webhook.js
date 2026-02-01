@@ -2,8 +2,9 @@ const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 
 export default async function handler(req, res) {
-  // 1. Jalankan fungsi Cron jika ada parameter ?action=cron
-  if (req.query.action === 'cron') {
+  // 1. Logika Cron Job (Gunakan URL object untuk menghindari Warning)
+  const fullUrl = new URL(req.url, `https://${req.headers.host}`);
+  if (fullUrl.searchParams.get('action') === 'cron') {
     const LIST_GRUP = ["-5126863127", "-1002447926214"]; 
     try {
       const data = await getSheetData();
@@ -16,7 +17,7 @@ export default async function handler(req, res) {
     }
   }
 
-  // 2. Respon Bot Telegram Biasa
+  // 2. Respon Bot Telegram
   if (req.method !== 'POST') return res.status(200).send('Bot is running...');
 
   const update = req.body;
@@ -50,7 +51,6 @@ async function getSheetData() {
   await doc.loadInfo();
   const sheet = doc.sheetsByTitle['PVT FFG BGES'];
   
-  // Ambil range U900:AB926 sesuai data Mas Ecky
   await sheet.loadCells('U900:AB926'); 
   const updatedAt = sheet.getCell(899, 27).formattedValue || "-";
 
@@ -64,27 +64,25 @@ async function getSheetData() {
   for (let r = 900; r <= 925; r++) {
     const noInternet = sheet.getCell(r, 20).formattedValue || "-";
     const nama = sheet.getCell(r, 21).formattedValue || "-";
-    const status = sheet.getCell(r, 22).formattedValue || "-";
+    const status = (sheet.getCell(r, 22).formattedValue || "").toString().toUpperCase();
     const tanggal = sheet.getCell(r, 23).formattedValue || "-";
     const redaman = sheet.getCell(r, 24).formattedValue || "-";
-    const hasil = sheet.getCell(r, 25).formattedValue || "-";
+    const hasil = (sheet.getCell(r, 25).formattedValue || "").toString().toUpperCase();
 
-    let iconHasil = hasil; 
-    const hasilClean = String(hasil).toUpperCase();
-    const statusClean = String(status).toUpperCase();
+    let iconHasil = hasil || "-"; 
 
     // Logika Ikon & Hitung Rekap
-    if (hasilClean.includes("UNSPEK")) {
+    if (hasil.includes("UNSPEK")) {
       iconHasil = `⚠️ ${hasil}`;
       countUnspek++;
-    } else if (hasilClean.includes("SPEK")) {
+    } else if (hasil.includes("SPEK")) {
       iconHasil = `✅ ${hasil}`;
       countSpek++;
-    } else if (hasilClean.includes("OFFLINE")) {
+    } else if (hasil.includes("OFFLINE")) {
       countOffline++;
-      if (statusClean.includes("DYING") || statusClean.includes("GASP")) {
+      if (status.includes("DYING") || status.includes("GASP")) {
         iconHasil = `⚠️ ${hasil}`;
-      } else if (statusClean.includes("LOS")) {
+      } else if (status.includes("LOS")) {
         iconHasil = `❌ ${hasil}`;
       } else {
         iconHasil = `❌ ${hasil}`;
@@ -102,7 +100,7 @@ async function getSheetData() {
   result += `✅ TOTAL SPEK: <b>${countSpek}</b>\n`;
   result += `⚠️ TOTAL UNSPEK: <b>${countUnspek}</b>\n`;
   result += `❌ TOTAL OFFLINE: <b>${countOffline}</b>\n`;
-  result += `\n<i>Semangat kerjanya, Mas Ecky! 🚀</i>`;
+  result += `\n<i>Semangat kerjanya teman teman!!! 🚀</i>`;
 
   return result;
 }
