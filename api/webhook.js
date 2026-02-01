@@ -58,7 +58,7 @@ async function getSheetData() {
     let iconHasil = hasil; 
     if (hasil === "OFFLINE" && status === "DYING GASP") {
       iconHasil = `⚠️ ${hasil}`;
-    } else if (hasil === "SPEK" && status === "ONLINE") {
+    } else if (hasil === "ONLINE" && status === "SPEK") {
       iconHasil = `✅ ${hasil}`;
     } else if (hasil === "OFFLINE" && status === "LOS") {
       iconHasil = `❌ ${hasil}`;
