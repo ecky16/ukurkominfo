@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   if (req.query.action === 'cron') {
     const LIST_GRUP = [
       "-5126863127", 
-      "-1002447926214", // Contoh ID grup
+      "-10014", // Contoh ID grup
       "-100xxxxxxxxxx"
     ]; 
 
