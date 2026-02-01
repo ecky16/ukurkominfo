@@ -43,33 +43,38 @@ async function getSheetData() {
   await doc.loadInfo();
   const sheet = doc.sheetsByTitle['PVT FFG BGES'];
   
-  // Ambil range U sampai AB
   await sheet.loadCells('U900:AB926'); 
   const updatedAt = sheet.getCell(899, 27).formattedValue || "-";
 
   let result = "<b>📊 UKUR HARIAN WIFI KOMINFO</b>\n";
   result += `🕒 <i>Update at: ${updatedAt}</i>\n\n`;
 
+  // --- Inisialisasi Counter ---
+  let countSpek = 0;
+  let countUnspek = 0;
+  let countOffline = 0;
+
   for (let r = 900; r <= 925; r++) {
-    const noInternet = sheet.getCell(r, 20).formattedValue || "-"; // Kolom U
-    const nama = sheet.getCell(r, 21).formattedValue || "-";       // Kolom V
-    const status = sheet.getCell(r, 22).formattedValue || "-";     // Kolom W (Status Layanan)
-    const tanggal = sheet.getCell(r, 23).formattedValue || "-";    // Kolom X
-    const redaman = sheet.getCell(r, 24).formattedValue || "-";    // Kolom Y
-    const hasil = sheet.getCell(r, 25).formattedValue || "-";      // Kolom Z (HASIL UKUR)
+    const noInternet = sheet.getCell(r, 20).formattedValue || "-";
+    const nama = sheet.getCell(r, 21).formattedValue || "-";
+    const status = sheet.getCell(r, 22).formattedValue || "-";
+    const tanggal = sheet.getCell(r, 23).formattedValue || "-";
+    const redaman = sheet.getCell(r, 24).formattedValue || "-";
+    const hasil = sheet.getCell(r, 25).formattedValue || "-";
 
     let iconHasil = hasil; 
-    
-    // LOGIKA PERBAIKAN: Cek kata SPEK di variabel 'hasil' (Kolom Z)
-    // LOGIKA PERBAIKAN: Cek kata SPEK atau UNSPEK di kolom Z
     const hasilClean = String(hasil).toUpperCase();
     const statusClean = String(status).toUpperCase();
 
+    // --- Logika Ikon & Hitung Rekap ---
     if (hasilClean.includes("UNSPEK")) {
-      iconHasil = `⚠️ ${hasil}`; // Jika ada kata UNSPEK, beri tanda peringatan
+      iconHasil = `⚠️ ${hasil}`;
+      countUnspek++;
     } else if (hasilClean.includes("SPEK")) {
-      iconHasil = `✅ ${hasil}`; // Jika murni SPEK, beri centang hijau
+      iconHasil = `✅ ${hasil}`;
+      countSpek++;
     } else if (hasilClean.includes("OFFLINE")) {
+      countOffline++;
       if (statusClean.includes("DYING") || statusClean.includes("GASP")) {
         iconHasil = `⚠️ ${hasil}`;
       } else if (statusClean.includes("LOS")) {
@@ -77,7 +82,6 @@ async function getSheetData() {
       } else {
         iconHasil = `❌ ${hasil}`;
       }
-    
     }
 
     result += `🆔 <code>${noInternet}</code>\n`;
@@ -86,9 +90,16 @@ async function getSheetData() {
     result += `📉 Redaman: <code>${redaman}</code> | ${iconHasil}\n`;
     result += `────────────────────\n`;
   }
+
+  // --- Tambahkan Bagian Rekap di Paling Bawah ---
+  result += `\n<b>📝 RINGKASAN STATUS:</b>\n`;
+  result += `✅ TOTAL SPEK: <b>${countSpek}</b>\n`;
+  result += `⚠️ TOTAL UNSPEK: <b>${countUnspek}</b>\n`;
+  result += `❌ TOTAL OFFLINE: <b>${countOffline}</b>\n`;
+  result += `\n<i>Semangat kerjanya, Mas Ecky! 🚀</i>`;
+
   return result;
 }
-
 async function sendTelegram(chatId, text) {
   await fetch(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendMessage`, {
     method: 'POST',
